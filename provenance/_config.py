@@ -118,9 +118,9 @@ def from_config(config):
 
 def load_config(config):
     objs = from_config(config)
-    registry = r.Registry(objs['blobstores'], objs['repos'], config['default_repo'])
-    r.Registry.set_current(registry)
-    return registry
+    pconfig = r.Config(objs['blobstores'], objs['repos'], config['default_repo'])
+    r.Config.set_current(pconfig)
+    return pconfig
 
 
 def load_yaml_config(filename):

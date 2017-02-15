@@ -313,7 +313,7 @@ def test_composite_artifacts(repo):
     assert results['b'].artifact.load_kwargs == {'memmap': True}
 
 
-def test_does_not_allow_argument_modification(repo):
+def test_does_not_allow_argument_mutation(repo):
     @p.provenance()
     def append_3_inc(a):
         a.append(3)
@@ -323,6 +323,43 @@ def test_does_not_allow_argument_modification(repo):
     with pytest.raises(pc.ImpureFunctionError, message=msg):
         result = append_3_inc([1,2])
         assert False
+
+
+def test_run_info_is_preserved_for_artifacts(repo):
+
+    @p.provenance()
+    def foo(a):
+        return a + 10
+
+    res = foo(5)
+    expected_info = r._run_info()
+    assert res.artifact.run_info == expected_info
+
+    reloaded = repo.get_by_id(res.artifact.id)
+    reloaded.run_info == expected_info
+
+
+def test_adding_custom_info_to_run_info(memory_repo):
+
+    @p.provenance()
+    def foo(a):
+        return a + 10
+
+    def moar_info(info):
+        info['git_ref'] = 'deadbeef'
+        return info
+    p.set_run_info_fn(moar_info)
+
+    res = foo(5)
+    assert res.artifact.run_info['git_ref'] == 'deadbeef'
+
+    # Note, that setting this will not remove the cache living
+    # on a PGRepo so people must set this fn before any artifact
+    # is set.
+    p.set_run_info_fn(None)
+    
+    res = foo(10)
+    assert 'git_ref' not in res.artifact.run_info
 
 
 def test_set_creation(repo):
