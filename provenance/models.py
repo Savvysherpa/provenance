@@ -1,21 +1,44 @@
+import copy
 from datetime import datetime
-from memoized_property import memoized_property
 
 import sqlalchemy as sa
-import sqlalchemy.orm
 import sqlalchemy.dialects.postgresql as pg
 import sqlalchemy.ext.declarative
+import sqlalchemy.orm
+from memoized_property import memoized_property
 
 Base = sa.ext.declarative.declarative_base()
 
 SHA1_LENGTH = 40
 VALUE_ID_LENGTH = SHA1_LENGTH + 10 # extra 10 for optional file extension info
 
+class Run(Base):
+    __tablename__ = 'runs'
+
+    id = sa.Column(pg.INTEGER, primary_key=True)
+    hostname = sa.Column(pg.VARCHAR(256))
+    info = sa.Column(pg.JSONB)
+    created_at = sa.Column(pg.TIMESTAMP, default=datetime.utcnow)
+    artifacts = sqlalchemy.orm.relationship("Artifact")
+
+    def __init__(self, info):
+        self.info = info
+        self.hostname = info['host']['nodename']
+        self.created_at = info['created_at']
+
+    @memoized_property
+    def info_with_datetimes(self):
+        result = copy.copy(self.info)
+        result['created_at'] = datetime.strptime(result['created_at'],
+                                                 '%Y-%m-%d %H:%M:%S.%f')
+        return result
+
 class Artifact(Base):
     __tablename__ = 'artifacts'
 
     id = sa.Column(pg.VARCHAR(SHA1_LENGTH), primary_key=True)
     value_id = sa.Column(pg.VARCHAR(VALUE_ID_LENGTH))
+    run_id = sa.Column(pg.INTEGER, sa.ForeignKey("runs.id"))
 
     name = sa.Column(pg.VARCHAR(1000))
     version = sa.Column(pg.INTEGER)
@@ -40,8 +63,10 @@ class Artifact(Base):
     dump_kwargs = sa.Column(pg.JSONB)
     custom_fields = sa.Column(pg.JSONB)
 
-    def __init__(self, artifact, inputs_json):
+    def __init__(self, artifact, inputs_json, run):
         self.id = artifact.id
+        self.run = run
+        self.run_id = run.id
         self.value_id = artifact.value_id
         self.name = artifact.name
         self.version = artifact.version
@@ -51,8 +76,6 @@ class Artifact(Base):
         self.value_id_duration = artifact.value_id_duration
         self.compute_duration = artifact.compute_duration
         self.hash_duration = artifact.hash_duration
-        self.host = artifact.host
-        self.process = artifact.process
         self.input_artifact_ids = artifact.input_artifact_ids
         self.inputs_json = inputs_json
         self.custom_fields = artifact.custom_fields
@@ -73,8 +96,6 @@ class Artifact(Base):
                 'value_id_duration': self.value_id_duration,
                 'compute_duration': self.compute_duration,
                 'hash_duration': self.hash_duration,
-                'host': self.host,
-                'process': self.process,
                 'input_artifact_ids': self.input_artifact_ids,
                 'serializer': self.serializer,
                 'load_kwargs': self.load_kwargs,

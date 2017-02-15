@@ -1,23 +1,19 @@
-from collections import namedtuple
-import time
 import datetime
-
-import multiprocessing
 import os
-import platform
 import shutil
+import time
+from collections import namedtuple
 
-import psutil
 import toolz as t
 from boltons import funcutils as bfu
 
-from ._dependencies import dependencies
 from . import artifact_id_hasher as ah
-from .hashing import hash, file_hash
 from . import repos as repos
 from . import serializers as s
-from .serializers import DEFAULT_VALUE_SERIALIZER
 from . import utils
+from ._dependencies import dependencies
+from .hashing import file_hash, hash
+from .serializers import DEFAULT_VALUE_SERIALIZER
 
 
 class ImpureFunctionError(Exception):
@@ -32,35 +28,11 @@ def get_metadata(f):
         return {}
 
 
-@t.memoize()
-def host_info():
-    return {'machine': platform.machine(),
-            'nodename': platform.node(),
-            'platform': platform.platform(),
-            'processor': platform.processor(),
-            'cpu_count': multiprocessing.cpu_count(),
-            'release': platform.release(),
-            'system': platform.system(),
-            'version': platform.version()}
-
-
-@t.memoize()
-def process_info():
-    pid = os.getpid()
-    p = psutil.Process(pid)
-    return {'cmdline': p.cmdline(),
-            'cwd': p.cwd(),
-            'exe': p.exe(),
-            'name': p.name(),
-            'num_fds': p.num_fds(),
-            'num_threads': p.num_threads()}
-
-
 artifact_properties = ['id', 'value_id', 'inputs', 'fn_module', 'fn_name', 'value',
                        'name', 'version', 'composite', 'value_id_duration',
                        'serializer', 'load_kwargs', 'dump_kwargs',
-                       'compute_duration', 'hash_duration', 'computed_at', 'host',
-                       'process', 'custom_fields', 'input_artifact_ids']
+                       'compute_duration', 'hash_duration', 'computed_at',
+                       'custom_fields', 'input_artifact_ids']
 
 ArtifactRecord = namedtuple('ArtifactRecord', artifact_properties)
 
@@ -218,7 +190,8 @@ def provenance_wrapper(repo, f):
                      'load_kwargs': func_info['load_kwargs'],
                      'dump_kwargs': func_info['dump_kwargs'],
                      'composite': func_info['composite'],
-                     'host': host_info(), 'process': process_info()}
+   #                  'host': host_info(), 'process': process_info()
+    }
 
     @bfu.wraps(f)
     def _provenance_wrapper(*args, **kargs):

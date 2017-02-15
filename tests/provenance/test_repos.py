@@ -152,7 +152,7 @@ def test_permissions(atomic_repo):
     with pytest.raises(cs.PermissionError) as e:
         repo.put(artifact)
     assert artifact not in repo
-
+    
     repo._write = True
     repo.put(artifact)
 
