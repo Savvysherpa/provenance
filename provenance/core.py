@@ -32,7 +32,7 @@ artifact_properties = ['id', 'value_id', 'inputs', 'fn_module', 'fn_name', 'valu
                        'name', 'version', 'composite', 'value_id_duration',
                        'serializer', 'load_kwargs', 'dump_kwargs',
                        'compute_duration', 'hash_duration', 'computed_at',
-                       'custom_fields', 'input_artifact_ids']
+                       'custom_fields', 'input_artifact_ids', 'run_info']
 
 ArtifactRecord = namedtuple('ArtifactRecord', artifact_properties)
 
@@ -116,7 +116,7 @@ def create_id(input_hashes, input_hash_fn, name, version):
 
 
 @t.curry
-def composite_artifact(repo, inputs, input_hashes, input_artifact_ids,
+def composite_artifact(repo, _run_info, inputs, input_hashes, input_artifact_ids,
                        input_hash_fn, artifact_info, compute_duration,
                        computed_at, key, value):
     start_hash_time = time.time()
@@ -139,7 +139,7 @@ def composite_artifact(repo, inputs, input_hashes, input_artifact_ids,
                             value_id_duration=value_id_duration,
                             compute_duration=compute_duration,
                             hash_duration=hash_duration, computed_at=computed_at,
-                            inputs=inputs, **info)
+                            inputs=inputs, run_info=_run_info, **info)
     return repo.put(record)
 
 def _base_fn(f):
@@ -175,6 +175,10 @@ def _archive_file_hash(filename, preserve_file_ext):
     return value_id
 
 
+def run_info():
+    return repos.Config.current().run_info()
+
+
 @t.curry
 def provenance_wrapper(repo, f):
     base_fn = _base_fn(f)
@@ -189,14 +193,12 @@ def provenance_wrapper(repo, f):
                      'serializer': func_info['serializer'],
                      'load_kwargs': func_info['load_kwargs'],
                      'dump_kwargs': func_info['dump_kwargs'],
-                     'composite': func_info['composite'],
-   #                  'host': host_info(), 'process': process_info()
-    }
+                     'composite': func_info['composite']}
 
     @bfu.wraps(f)
     def _provenance_wrapper(*args, **kargs):
         r = repos.get_default_repo() if repo is None else repo
-        info = artifact_info
+        _run_info = run_info()
         archive_file = func_info['archive_file']
 
         start_hash_time = time.time()
@@ -246,9 +248,10 @@ def provenance_wrapper(repo, f):
 
             if artifact_info['composite']:
                 input_hash_fn = func_info['identifiers']['input_hash_fn']
-                ca = composite_artifact(r, inputs, input_hashes, input_artifact_ids,
-                                        input_hash_fn, artifact_info,
-                                        compute_duration, computed_at)
+                ca = composite_artifact(r, _run_info, inputs, input_hashes,
+                                        input_artifact_ids, input_hash_fn,
+                                        artifact_info, compute_duration,
+                                        computed_at)
                 value = {k: ca(k, v) for k, v in value.items()}
                 artifact_info['serializer'] = DEFAULT_VALUE_SERIALIZER.name
                 artifact_info['load_kwargs'] = None
@@ -270,7 +273,7 @@ def provenance_wrapper(repo, f):
                                     value_id_duration=value_id_duration,
                                     compute_duration=compute_duration,
                                     hash_duration=hash_duration,
-                                    computed_at=computed_at,
+                                    computed_at=computed_at, run_info=_run_info,
                                     inputs=inputs, **artifact_info)
             artifact = r.put(record)
 

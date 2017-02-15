@@ -167,6 +167,7 @@ def artifact_record(**kargs):
                               'fn_module': 'foo', 'fn_name': 'bar',
                               'value': 55, 'name': 'bar',
                               'version': 0,
-                              'serializer': 'joblib'},
+                              'serializer': 'joblib',
+                              'run_info': pc.run_info()},
                              kargs)
     return pc.ArtifactRecord(**artifact_props)

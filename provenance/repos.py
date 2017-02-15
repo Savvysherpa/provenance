@@ -11,6 +11,7 @@ from datetime import datetime
 import numpy as np
 import psutil
 import sqlalchemy
+import sqlalchemy.dialects.postgresql as pg
 import sqlalchemy.orm
 import toolz as t
 import wrapt
@@ -78,14 +79,13 @@ class Config(object):
 
     def run_info(self):
         if self._run_info is None:
-            self._run_info = self.run_info_fn(
+            run_info = self.run_info_fn(
                 {'host': _host_info(), 'process': _process_info(),
                  'created_at': datetime.utcnow()})
+            run_info['id'] = hash(run_info)
+            self._run_info = run_info
         return self._run_info
 
-
-def _run_info():
-    return Config.current().run_info()
 
 Config.set_current(Config({}, {}, None))
 
@@ -224,8 +224,6 @@ class Artifact(object):
         self.__dict__ = props.copy()
         self.repo = repo
 
-        # TODO: This means that None as an artifact cannot have
-        # the value preloaded (which might not be a big deal)
         if value is not None:
             self._value = value
         if inputs is not None:
@@ -286,13 +284,13 @@ def _artifact_id(artifact_or_id):
                     format(artifact_or_id))
 
 
-def _artifact_from_record(repo, record, run_info=None):
+def _artifact_from_record(repo, record):
     if isinstance(record, Artifact):
         return record
     return Artifact(repo,
-                    t.dissoc(record._asdict(), 'value', 'inputs'),
+                    t.dissoc(record._asdict(), 'value', 'inputs', 'run_info'),
                     value=record.value, inputs=record.inputs,
-                    run_info=run_info)
+                    run_info=record.run_info)
 
 
 
@@ -339,13 +337,13 @@ class MemoryRepo(ArtifactRepository):
         artifact_id = _artifact_id(record)
         cs.ensure_put(self, artifact_id, read_through)
         self.artifacts.append(record)
-        return _artifact_from_record(self, record, _run_info())
+        return _artifact_from_record(self, record)
 
     def get_by_id(self, artifact_id):
         cs.ensure_read(self)
         record = _find_first(lambda a: a.id == artifact_id, self.artifacts)
         if record:
-            return _artifact_from_record(self, record, _run_info())
+            return _artifact_from_record(self, record)
         else:
             raise KeyError(artifact_id, self)
 
@@ -556,13 +554,16 @@ class PostgresRepo(ArtifactRepository):
         with self.session() as s:
             return s.query(db.Artifact).filter(db.Artifact.id == artifact_id).count() > 0
 
-    @memoized_property
-    def _current_run(self):
-        with self.session() as session:
-            run = db.Run(_run_info())
-            session.add(run)
-            session.commit()
-            return run
+    def _upsert_run(self, session, info):
+        sql = pg.insert(db.Run).values(
+            id=info['id'], info=info,
+            hostname=info['host']['nodename'],
+            created_at=info['created_at']
+        ).on_conflict_do_nothing(index_elements=['id'])
+
+        session.execute(sql)
+
+        return db.Run(info)
 
     def put(self, artifact_record, read_through=False):
         with self.session() as session:
@@ -573,12 +574,13 @@ class PostgresRepo(ArtifactRepository):
                                s.serializer(artifact_record))
 
             inputs_json = _inputs_json(artifact_record.inputs)
-            run = self._current_run
+            run = self._upsert_run(session, artifact_record.run_info)
             db_artifact = db.Artifact(artifact_record, inputs_json, run)
+
             session.add(db_artifact)
             session.commit()
 
-            return _artifact_from_record(self, artifact_record, run.info_with_datetimes)
+            return _artifact_from_record(self, artifact_record)
 
     def get_by_id(self, artifact_id):
         cs.ensure_read(self)

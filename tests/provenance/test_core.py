@@ -332,7 +332,7 @@ def test_run_info_is_preserved_for_artifacts(repo):
         return a + 10
 
     res = foo(5)
-    expected_info = r._run_info()
+    expected_info = pc.run_info()
     assert res.artifact.run_info == expected_info
 
     reloaded = repo.get_by_id(res.artifact.id)
@@ -348,16 +348,14 @@ def test_adding_custom_info_to_run_info(memory_repo):
     def moar_info(info):
         info['git_ref'] = 'deadbeef'
         return info
+
     p.set_run_info_fn(moar_info)
 
     res = foo(5)
     assert res.artifact.run_info['git_ref'] == 'deadbeef'
 
-    # Note, that setting this will not remove the cache living
-    # on a PGRepo so people must set this fn before any artifact
-    # is set.
     p.set_run_info_fn(None)
-    
+
     res = foo(10)
     assert 'git_ref' not in res.artifact.run_info
 

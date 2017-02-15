@@ -15,13 +15,14 @@ VALUE_ID_LENGTH = SHA1_LENGTH + 10 # extra 10 for optional file extension info
 class Run(Base):
     __tablename__ = 'runs'
 
-    id = sa.Column(pg.INTEGER, primary_key=True)
+    id = sa.Column(pg.VARCHAR(SHA1_LENGTH), primary_key=True)
     hostname = sa.Column(pg.VARCHAR(256))
     info = sa.Column(pg.JSONB)
     created_at = sa.Column(pg.TIMESTAMP, default=datetime.utcnow)
     artifacts = sqlalchemy.orm.relationship("Artifact")
 
     def __init__(self, info):
+        self.id = info['id']
         self.info = info
         self.hostname = info['host']['nodename']
         self.created_at = info['created_at']
@@ -29,8 +30,7 @@ class Run(Base):
     @memoized_property
     def info_with_datetimes(self):
         result = copy.copy(self.info)
-        result['created_at'] = datetime.strptime(result['created_at'],
-                                                 '%Y-%m-%d %H:%M:%S.%f')
+        result['created_at'] = self.created_at
         return result
 
 class Artifact(Base):
@@ -38,7 +38,7 @@ class Artifact(Base):
 
     id = sa.Column(pg.VARCHAR(SHA1_LENGTH), primary_key=True)
     value_id = sa.Column(pg.VARCHAR(VALUE_ID_LENGTH))
-    run_id = sa.Column(pg.INTEGER, sa.ForeignKey("runs.id"))
+    run_id = sa.Column(pg.VARCHAR(SHA1_LENGTH), sa.ForeignKey("runs.id"))
 
     name = sa.Column(pg.VARCHAR(1000))
     version = sa.Column(pg.INTEGER)
