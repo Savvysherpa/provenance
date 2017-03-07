@@ -1,0 +1,5 @@
+name: provenance-basic-example
+dependencies:
+  - python
+  - pip:
+    - provenance
