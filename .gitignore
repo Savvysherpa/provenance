@@ -18,3 +18,4 @@ scratch/
 .eggs
 .artifacts
 examples/**/artifacts/
+examples/**/blobstore/

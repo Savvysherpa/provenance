@@ -10,5 +10,6 @@ alembic>=0.9.1
 sqlalchemy-utils>=0.32.12
 memoized-property>=1.0.2
 wrapt>=1.10.8
+paramiko
 psycopg2
 numpy

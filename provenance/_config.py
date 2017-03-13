@@ -34,8 +34,13 @@ def atomic_item_from_config(config, type_dict, item_plural, name=None):
     return cls(**kargs)
 
 
-BLOBSTORE_TYPES = {'disk': bs.DiskStore, 's3': bs.S3Store,
-                   'memory': bs.MemoryStore, 'chained': bs.ChainedStore}
+BLOBSTORE_TYPES = {'disk': bs.DiskStore, 's3': bs.S3Store, 'memory':
+                   bs.MemoryStore, 'chained': bs.ChainedStore}
+
+try:
+    BLOBSTORE_TYPES['sftp'] = bs.SFTPStore
+except AttributeError:
+    pass
 
 blobstore_from_config = atomic_item_from_config(type_dict=BLOBSTORE_TYPES,
                                            item_plural='Blobstores')

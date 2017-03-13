@@ -1,0 +1,35 @@
+blobstores:
+  disk:
+    type: 'disk'
+    cachedir: 'blobstore'
+    read: True
+    write: True
+    read_through_write: True
+    delete: True
+  sftp:
+    type: 'sftp'
+    cachedir: '<This is the path on your local machine where you want the blobs to be cached, ex. /Users/me/provenance/examples/sftp/artifacts>'
+    basepath: '<            ""           remote machine                ""                       , ex. /home/me/artifacts>, you need to make sure that path directory exists.',
+    read: True
+    write: True
+    read_through_write: True
+    delete: True
+    ssh_config:
+      hostname: '<your host here>'
+      port: '<your port here as an int, defaults to 22 if excluded>',
+      username: '<your user here>'
+      password: '<your password here>'
+  experiment:
+    type: 'chained'
+    stores: ['disk', 'sftp']
+artifact_repos:
+  local:
+    type: 'postgres'
+    db: 'postgresql://localhost/provenance-experiment-example'
+    store: 'experiment'
+    read: True
+    write: True
+    create_db: True
+    read_through_write: False
+    delete: True
+default_repo: 'local'

@@ -4,8 +4,8 @@
 All you do is `conda env create`, `source activate provenance-basic-example`,
 and `./basic_example.py`.
 
-Then you can explore how the artifacts were saved in `./artifacts` and in `psql
-provenance-basic-example`.
+Then you can explore how the artifacts and blobs were saved in `./artifacts` and
+in `psql provenance-basic-example`.
 
 ## Step 2: Learn some stuff
 
