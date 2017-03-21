@@ -1,5 +1,6 @@
 name: provenance-sftp-example
 dependencies:
   - python==3.5
+  - paramiko
   - pip:
     - "git+https://github.com/bmabey/provenance.git"

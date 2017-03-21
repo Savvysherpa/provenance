@@ -5,6 +5,11 @@ import provenance.repos as r
 import copy
 import toolz as t
 
+try:
+    import provenance.sftp as sftp
+except ImportError:
+    print('To use the sftp blobstore install Paramiko')
+
 
 import logging
 logger = logging.getLogger(__name__)
@@ -37,10 +42,18 @@ def atomic_item_from_config(config, type_dict, item_plural, name=None):
 BLOBSTORE_TYPES = {'disk': bs.DiskStore, 's3': bs.S3Store, 'memory':
                    bs.MemoryStore, 'chained': bs.ChainedStore}
 
+
 try:
-    BLOBSTORE_TYPES['sftp'] = bs.SFTPStore
-except AttributeError:
-    pass
+    import provenance.sftp as sftp
+    BLOBSTORE_TYPES['sftp'] = sftp.SFTPStore
+
+except ImportError as e:
+    class SFTPStore(object):
+        def __init__(*args, **kargs):
+            raise(e)
+
+    BLOBSTORE_TYPES['sftp'] = SFTPStore
+
 
 blobstore_from_config = atomic_item_from_config(type_dict=BLOBSTORE_TYPES,
                                            item_plural='Blobstores')
