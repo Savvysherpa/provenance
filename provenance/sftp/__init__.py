@@ -28,9 +28,9 @@ class SFTPStore(bs.BaseBlobStore):
             delete=delete, on_duplicate_key=on_duplicate_key)
 
         if ssh_config is not None:
-            ssh_client = _ssh_client(ssh_config)
-        if ssh_client is not None:
-            sftp_client = paramiko.SFTPClient.from_transport(ssh_client._transport)
+            self.ssh_client = _ssh_client(ssh_config)
+        if self.ssh_client is not None:
+            sftp_client = paramiko.SFTPClient.from_transport(self.ssh_client._transport)
         if sftp_client is not None:
             self.sftp_client = sftp_client
         else:
