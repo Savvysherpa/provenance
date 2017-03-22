@@ -5,11 +5,6 @@ import provenance.repos as r
 import copy
 import toolz as t
 
-try:
-    import provenance.sftp as sftp
-except ImportError:
-    print('To use the sftp blobstore install Paramiko')
-
 
 import logging
 logger = logging.getLogger(__name__)
