@@ -81,6 +81,19 @@ def test_s3store(s3fs):
 
     assert_store_basic_ops(store, key, obj)
 
+def test_sftpstore_import():
+    import provenance._config as c
+    try:
+        import paramiko
+        _paramiko = True
+    except ImportError:
+        _paramiko = False
+    try:
+        store = c.BLOBSTORE_TYPES['sftp'](cachedir=None, basepath=None)
+        assert(_paramiko == True)
+    except ImportError:
+        assert(_paramiko == False)
+
 def test_chained_storage_with_disk_and_s3_sharing_cachedir(s3fs):
     tmp_dir = '/tmp/prov_shared_store'
     shutil.rmtree(tmp_dir, ignore_errors=True)

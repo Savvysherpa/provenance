@@ -44,8 +44,9 @@ try:
 
 except ImportError as e:
     class SFTPStore(object):
-        def __init__(*args, **kargs):
-            raise(e)
+        _err = e
+        def __init__(self, *args, **kargs):
+            raise(self._err)
 
     BLOBSTORE_TYPES['sftp'] = SFTPStore
 

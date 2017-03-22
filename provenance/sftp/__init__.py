@@ -27,6 +27,7 @@ class SFTPStore(bs.BaseBlobStore):
             read=read, write=write, read_through_write=read_through_write,
             delete=delete, on_duplicate_key=on_duplicate_key)
 
+        self.ssh_client = None
         if ssh_config is not None:
             self.ssh_client = _ssh_client(ssh_config)
         if self.ssh_client is not None:
@@ -34,6 +35,10 @@ class SFTPStore(bs.BaseBlobStore):
         if sftp_client is not None:
             self.sftp_client = sftp_client
         else:
+            # This is to allow testing the importing/subpackage aspect without
+            # having to actually test the class by mocking an ssh connection.
+            if cachedir == None and basepath == None:
+                return
             raise ValueError('You must specify a SFTP client by passing in one of: sftp_client, ssh_config, ssh_client')
 
         self.cachedir = bs._abspath(cachedir)
