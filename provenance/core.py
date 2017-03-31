@@ -96,26 +96,37 @@ def fn_info(f):
     return info
 
 
-def hash_inputs(inputs, check_mutations=False):
+def hash_inputs(inputs, check_mutations=False, func_info=None):
     kargs = {}
     varargs = []
     all_artifacts = {}
+    if func_info is None:
+        func_info = {}
 
     for k, v in inputs['kargs'].items():
         h, artifacts = hash(v, hasher=ah.artifact_hasher())
         kargs[k] = h
-        all_artifacts = t.merge(all_artifacts, artifacts)
+        for a in artifacts:
+            comp = all_artifacts.get(a.id, (a, []))
+            comp[1].append(k)
+            all_artifacts[a.id] = comp
 
-    for v in inputs['varargs']:
+    for i, v in enumerate(inputs['varargs']):
         h, artifacts = hash(v, hasher=ah.artifact_hasher())
         varargs.append(h)
-        all_artifacts = t.merge(all_artifacts, artifacts)
+        for a in artifacts:
+            comp = all_artifacts.get(a.id, (a, []))
+            comp[1].append("varargs[{}]".format(i))
+            all_artifacts[a.id] = comp
 
     if check_mutations:
-        for a in all_artifacts.values():
+        for comp in all_artifacts.values():
+            a, arg_names = comp
             if a.value_id != hash(a.value):
-                msg = "Artifact {}, of type {} has been mutated"
-                raise MutatedArtifactValueError(msg.format(a.id, type(a.value)))
+                msg = "Artifact {}, of type {} was mutated before being passed to {}.{} as arguments ({})"
+                msg = msg.format(a.id, type(a.value), func_info.get('module'),
+                                 func_info.get('name'), ",".join(arg_names))
+                raise MutatedArtifactValueError(msg)
 
     input_hashes = {'kargs': kargs, 'varargs': tuple(varargs)}
     return (input_hashes, frozenset(all_artifacts.keys()))
@@ -242,7 +253,7 @@ def provenance_wrapper(repo, f):
             value_id = _archive_file_hash(filename, func_info['preserve_file_ext'])
             inputs['filehash'] = value_id
 
-        input_hashes, input_artifact_ids = hash_inputs(inputs, repos.get_check_mutations())
+        input_hashes, input_artifact_ids = hash_inputs(inputs, repos.get_check_mutations(), func_info)
 
         id = create_id(input_hashes, **func_info['identifiers'])
         hash_duration = time.time() - start_hash_time

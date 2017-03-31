@@ -135,7 +135,8 @@ def load_config(config):
     pconfig = r.Config(objs['blobstores'], objs['repos'],
                        default_repo=config['default_repo'],
                        run_info_fn=config.get('run_info_fn', None),
-                       use_cache=config.get('use_cache', True))
+                       use_cache=config.get('use_cache', True),
+                       check_mutations=config.get('check_mutations', False))
     r.Config.set_current(pconfig)
     return pconfig
 

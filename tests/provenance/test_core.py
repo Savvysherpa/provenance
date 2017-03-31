@@ -705,7 +705,9 @@ def test_check_mutations(repo, with_check_mutations):
 
     # We should not be able to process mutated data
     data[0] = 5
-    expected_msg = "Artifact {}, of type {} has been mutated".format(
-        data.artifact.id, type(data.artifact.value))
-    with pytest.raises(pc.MutatedArtifactValueError, message=expected_msg):
+    with pytest.raises(pc.MutatedArtifactValueError) as excinfo:
         process_data(data)
+    expected_msg = \
+        "Artifact {}, of type {} was mutated before being passed to test_core.process_data as arguments (data)".format(
+            data.artifact.id, type(data.artifact.value))
+    assert str(excinfo.value) == expected_msg

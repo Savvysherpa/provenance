@@ -24,7 +24,7 @@ class ArtifactHasher(h.Hasher):
         h.Hasher.save(self, obj)
 
     def hash(self, obj):
-        return (h.Hasher.hash(self, obj), self.artifacts)
+        return (h.Hasher.hash(self, obj), self.artifacts.values())
 
 
 class NumpyArtifactHasher(h.NumpyHasher):
@@ -40,7 +40,7 @@ class NumpyArtifactHasher(h.NumpyHasher):
         h.NumpyHasher.save(self, obj)
 
     def hash(self, obj):
-        return (h.NumpyHasher.hash(self, obj), self.artifacts)
+        return (h.NumpyHasher.hash(self, obj), self.artifacts.values())
 
 
 def artifact_hasher(*args, **kwargs):
