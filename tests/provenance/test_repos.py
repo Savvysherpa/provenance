@@ -46,13 +46,13 @@ def test_inputs_json(db_session):
         "filename": "foo-bar",
         "timestamp": now,
         "inc_x": {
-            "id": "d2a4dd06f3193726cc2368d63de11c5792736467",
-            "name": "process_data_X",
+            "id": "2c33a362ebd51f830d0b245473ab6c1269674259",
+            "name": "test_repos.process_data_X",
             "type": "ArtifactProxy"
         },
         "inc_y": {
-            "id": "2816e9da806c5204820f0c45e79366dc42292fb4",
-            "name": "process_data_Y",
+            "id": "f9b1bb7a8aaf435fbf60b92cd88bf6c46604f702",
+            "name": "test_repos.process_data_Y",
             "type": "ArtifactProxy"
         }
     }

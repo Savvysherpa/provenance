@@ -3,6 +3,13 @@
 History
 -------
 
+0.10.0 (TBD)
+------------
+
+* Change the default artifact name from the function name to the fully qualified module and function name.
+  This will invalidate previously cached artifacts unless the names are migrated or explicitly set.
+* Other changes that need to be aggregated before making the release
+
 0.9.4.2 (2016-03-23)
 ---------------------
 

@@ -42,7 +42,8 @@ ArtifactRecord = namedtuple('ArtifactRecord', artifact_properties)
 def fn_info(f):
     info = utils.fn_info(f)
     metadata = get_metadata(f)
-    info['identifiers'] = {'name': metadata['name'],
+    name = metadata['name'] or '.'.join([info['module'], info['name']])
+    info['identifiers'] = {'name': name,
                            'version': metadata['version'],
                            'input_hash_fn': metadata['input_hash_fn']}
     info['input_process_fn'] = metadata['input_process_fn']
@@ -84,7 +85,7 @@ def fn_info(f):
 
     if not valid_serializer:
         msg = 'Invalid serializer option "{}" for artifact "{}", available serialziers: {} '.\
-              format(info['serializer'], info['name'], tuple(s.serializers.keys()))
+              format(info['serializer'], info['identifiers']['name'], tuple(s.serializers.keys()))
         raise ValueError(msg)
 
     return info
@@ -508,14 +509,11 @@ def provenance(version=0, repo=None, name=None, merge_defaults=None,
         input_process_fn = lambda inputs: inputs
 
     def wrapped(f):
-        _name = name
-        if _name is None:
-            _name = f.__name__
         _custom_fields = custom_fields or {}
         if tags:
             _custom_fields['tags'] = tags
         f._provenance_metadata = {'version': version,
-                                  'name': _name,
+                                  'name': name,
                                   'archive_file': archive_file,
                                   'delete_original_file': delete_original_file,
                                   'input_hash_fn': input_hash_fn,
