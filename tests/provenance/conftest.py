@@ -171,3 +171,10 @@ def artifact_record(**kargs):
                               'run_info': pc.run_info()},
                              kargs)
     return pc.ArtifactRecord(**artifact_props)
+
+
+@pytest.fixture()
+def with_check_mutations():
+    p.set_check_mutations(True)
+    yield True
+    p.set_check_mutations(False)

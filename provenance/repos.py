@@ -83,13 +83,14 @@ class Config(object):
     def set_current(cls, registry):
         cls._current = registry
 
-    def __init__(self, blobstores, repos, default_repo, run_info_fn=None, use_cache=True):
+    def __init__(self, blobstores, repos, default_repo, run_info_fn=None, use_cache=True, check_mutations=False):
         self.blobstores = blobstores
         self.repos = repos
         self.set_default_repo(default_repo)
         self._run_info = None
         self.run_info_fn = run_info_fn or t.identity
         self.use_cache = use_cache
+        self.check_mutations = check_mutations
 
     def set_default_repo(self, repo):
         if isinstance(repo, string_type):
@@ -138,6 +139,15 @@ def get_use_cache():
 
 def set_use_cache(setting):
     current_config().use_cache = setting
+
+
+def get_check_mutations():
+    return current_config().check_mutations
+
+
+def set_check_mutations(setting):
+    current_config().check_mutations = setting
+
 
 def get_repo_by_name(repo_name):
     return current_config().repos[repo_name]

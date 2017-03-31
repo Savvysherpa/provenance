@@ -8,7 +8,7 @@ from copy import copy
 import toolz as t
 from boltons import funcutils as bfu
 
-from . import artifact_id_hasher as ah
+from . import artifact_hasher as ah
 from . import repos as repos
 from . import serializers as s
 from . import utils
@@ -19,6 +19,11 @@ from .serializers import DEFAULT_VALUE_SERIALIZER
 
 class ImpureFunctionError(Exception):
     pass
+
+
+class MutatedArtifactValueError(Exception):
+    pass
+
 
 def get_metadata(f):
     if hasattr(f, '_provenance_metadata'):
@@ -91,23 +96,29 @@ def fn_info(f):
     return info
 
 
-def hash_inputs(inputs):
+def hash_inputs(inputs, check_mutations=False):
     kargs = {}
     varargs = []
-    all_ids = frozenset()
+    all_artifacts = {}
 
     for k, v in inputs['kargs'].items():
-        h, ids = hash(v, hasher=ah.artifact_id_hasher())
+        h, artifacts = hash(v, hasher=ah.artifact_hasher())
         kargs[k] = h
-        all_ids |= ids
+        all_artifacts = t.merge(all_artifacts, artifacts)
 
     for v in inputs['varargs']:
-        h, ids = hash(v, hasher=ah.artifact_id_hasher())
+        h, artifacts = hash(v, hasher=ah.artifact_hasher())
         varargs.append(h)
-        all_ids |= ids
+        all_artifacts = t.merge(all_artifacts, artifacts)
+
+    if check_mutations:
+        for a in all_artifacts.values():
+            if a.value_id != hash(a.value):
+                msg = "Artifact {}, of type {} has been mutated"
+                raise MutatedArtifactValueError(msg.format(a.id, type(a.value)))
 
     input_hashes = {'kargs': kargs, 'varargs': tuple(varargs)}
-    return (input_hashes, all_ids)
+    return (input_hashes, frozenset(all_artifacts.keys()))
 
 
 def create_id(input_hashes, input_hash_fn, name, version):
@@ -231,7 +242,7 @@ def provenance_wrapper(repo, f):
             value_id = _archive_file_hash(filename, func_info['preserve_file_ext'])
             inputs['filehash'] = value_id
 
-        input_hashes, input_artifact_ids = hash_inputs(inputs)
+        input_hashes, input_artifact_ids = hash_inputs(inputs, repos.get_check_mutations())
 
         id = create_id(input_hashes, **func_info['identifiers'])
         hash_duration = time.time() - start_hash_time
