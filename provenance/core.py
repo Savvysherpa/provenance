@@ -142,7 +142,7 @@ def create_id(input_hashes, input_hash_fn, name, version):
 @t.curry
 def composite_artifact(repo, _run_info, inputs, input_hashes, input_artifact_ids,
                        input_hash_fn, artifact_info, compute_duration,
-                       computed_at, key, value):
+                       computed_at, use_cache, key, value):
     start_hash_time = time.time()
     info = copy(artifact_info)
     info['composite'] = False
@@ -159,13 +159,20 @@ def composite_artifact(repo, _run_info, inputs, input_hashes, input_artifact_ids
     value_id_duration = time.time() - start_hash_time
 
 
-    record = ArtifactRecord(id=id, value_id=value_id, value=value,
-                            input_artifact_ids=input_artifact_ids,
-                            value_id_duration=value_id_duration,
-                            compute_duration=compute_duration,
-                            hash_duration=hash_duration, computed_at=computed_at,
-                            inputs=inputs, run_info=_run_info, **info)
-    return repo.put(record)
+    if not use_cache:
+        id = hash(id + value_id)
+    try:
+        artifact = repo.get_by_id(id)
+    except KeyError:
+        record = ArtifactRecord(id=id, value_id=value_id, value=value,
+                                input_artifact_ids=input_artifact_ids,
+                                value_id_duration=value_id_duration,
+                                compute_duration=compute_duration,
+                                hash_duration=hash_duration, computed_at=computed_at,
+                                inputs=inputs, run_info=_run_info, **info)
+        artifact = repo.put(record)
+
+    return artifact
 
 
 def _base_fn(f):
@@ -292,7 +299,7 @@ def provenance_wrapper(repo, f):
                 ca = composite_artifact(r, _run_info, inputs, input_hashes,
                                         input_artifact_ids, input_hash_fn,
                                         artifact_info, compute_duration,
-                                        computed_at)
+                                        computed_at, use_cache)
                 value = {k: ca(k, v) for k, v in value.items()}
                 artifact_info_['serializer'] = DEFAULT_VALUE_SERIALIZER.name
                 artifact_info_['load_kwargs'] = None

@@ -124,6 +124,8 @@ db_session_ = db_session
                      #   'chained-repo'
                 ])
 def repo(request, db_session):
+    # clean old config settings
+    r.Config.set_current(r.Config({}, {}, None))
     disk_store_gen = None
     disk_store_gen2 = None
     repo2 = None

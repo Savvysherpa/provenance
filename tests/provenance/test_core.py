@@ -688,6 +688,55 @@ def test_use_cache_false(repo):
     assert c.artifact.id != a.artifact.id
 
 
+
+def test_turning_use_cache_to_false(repo):
+    @p.provenance()
+    def increase(x):
+        return x + 1
+
+    a = increase(5)
+    assert a == 6
+
+    # We expect the values and artifacts to be the same because the
+    # function hasn't changed
+    b = increase(5)
+    assert b == 6
+    assert b.artifact.id == a.artifact.id
+
+    # We can modify the function, but because we aren't using the caching
+    # we shouldn't get stale values
+    p.set_use_cache(False)
+
+    c = increase(5)
+    assert c == 6
+    assert c.artifact.id != a.artifact.id
+
+
+def test_use_cache_false_with_composites(repo):
+    @p.provenance(returns_composite=True)
+    def incdec(x):
+        return {'inc': x + 1, 'dec': x - 1}
+
+    a = incdec(5)
+    assert a['inc'] == 6
+    assert a['dec'] == 4
+
+    # We expect the values and artifacts to be the same due to cachine
+    b = incdec(5)
+    assert b.artifact.id == a.artifact.id
+
+    p.set_use_cache(False)
+
+    # We expect the value to the same but the and artifacts different since
+    # caching is now turned off
+
+    c = incdec(5)
+    assert c['inc'] == 6
+    assert c['dec'] == 4
+    assert c.artifact.id != a.artifact.id
+    assert c['inc'].artifact.id != a['inc'].artifact.id
+
+
 def test_check_mutations(repo, with_check_mutations):
     @p.provenance()
     def load_data():
