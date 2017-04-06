@@ -188,6 +188,7 @@ def test_integration_keras_test(dbdiskrepo):
 
     assert model.artifact.id != compiled_model.artifact.id
     assert compiled_model.artifact.id != fitted_model.artifact.id
+    assert fitted_model.artifact.value_id == p.hash(fitted_model.artifact.value)
 
     model2 = basic_model()
     assert model2.artifact.id == model.artifact.id
@@ -207,6 +208,20 @@ def test_integration_keras_test(dbdiskrepo):
     assert hash(model3) == hash(model)
     model3.compile(**DEFAULT_COMPILE_OPTS)
     assert hash(model3) == hash(compiled_model)
+
+
+def test_reloading_from_disk_has_same_value_id(dbdiskrepo):
+
+    data = mnist_data()
+    model = basic_model()
+    compiled_model = compile_model(model)
+    fitted_model = fit_model(compiled_model, data['X_train'], data['Y_train'])
+
+    K.clear_session()
+
+    reloaded_model = p.load_proxy(fitted_model.artifact.id)
+
+    assert reloaded_model.artifact.value_id == p.hash(reloaded_model.artifact.value)
 
 
 # this gets to the core of deterministic training by TF (or theano)
