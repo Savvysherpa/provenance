@@ -110,23 +110,26 @@ class ArtifactSet(Base):
 
     id = sa.Column(pg.INTEGER, primary_key=True)
     set_id = sa.Column(pg.VARCHAR(SHA1_LENGTH))
-    name = sa.Column(pg.VARCHAR(1000))
+    labels = sa.Column(pg.JSONB)
     created_at = sa.Column(pg.TIMESTAMP, default=datetime.utcnow)
 
 
     def __init__(self, artifact_set):
         self.set_id = artifact_set.id
-        self.name = artifact_set.name
+        labels = artifact_set.labels
+        if isinstance(artifact_set.labels, str):
+            labels = {'name': artifact_set.labels}
+        self.labels = labels
         self.created_at = artifact_set.created_at
 
     @memoized_property
     def props(self):
         return {'id': self.set_id,
-                'name': self.name,
+                'labels': self.labels,
                 'created_at': self.created_at}
 
     def __repr__(self):
-        return '<ArtifactSet %r, %r>' % (self.set_id, self.name)
+        return '<ArtifactSet %r, %r>' % (self.set_id, self.labels)
 
 
 class ArtifactSetMember(Base):

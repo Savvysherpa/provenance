@@ -112,7 +112,7 @@ def test_repo_set_put_and_finding(repo):
     repo.put_set(artifact_set)
 
     assert repo.get_set_by_id(artifact_set.id) == artifact_set
-    found_set = repo.get_set_by_name('foo')
+    found_set = repo.get_set_by_labels('foo')
     assert found_set.name == 'foo'
     assert found_set.artifact_ids == {'123'}
 
@@ -124,7 +124,7 @@ def test_repo_raises_key_error_when_set_id_not_found(repo):
 
 def test_repo_raises_key_error_when_set_name_not_found(repo):
     with pytest.raises(KeyError) as e:
-        repo.get_set_by_name('foo')
+        repo.get_set_by_labels('foo')
 
 
 def test_repo_contains_set(repo):

@@ -210,6 +210,21 @@ def load_set_by_id(set_id):
     return get_default_repo().get_set_by_id(set_id)
 
 
+def load_set_by_labels(labels):
+    """Loads and returns the ``ArtifactSet`` with the ``labels`` from the default repo.
+
+    Parameters
+    ----------
+    labels : string or dictionary
+
+    See Also
+    --------
+    load_set_by_id
+    load_set_by_labels
+    """
+    return get_default_repo().get_set_by_labels(labels)
+
+
 def load_set_by_name(set_name):
     """Loads and returns the ``ArtifactSet`` with the ``set_name`` from the default repo.
 
@@ -220,22 +235,28 @@ def load_set_by_name(set_name):
     See Also
     --------
     load_set_by_id
+    load_set_by_labels
     """
-    return get_default_repo().get_set_by_name(set_name)
+    return get_default_repo().get_set_by_labels({'name': set_name})
+
+def _check_labels_name(labels):
+    if isinstance(labels, str):
+        return {'name': labels}
+    return labels
+
+def create_set(artifact_ids, labels=None):
+    labels = _check_labels_name(labels)
+    return ArtifactSet(artifact_ids, labels).put()
 
 
-def create_set(artifact_ids, name=None):
-    return ArtifactSet(artifact_ids, name).put()
-
-
-def name_set(artifact_set_or_id, name):
+def label_set(artifact_set_or_id, labels):
     repo = get_default_repo()
     if isinstance(artifact_set_or_id, ArtifactSet):
         artifact_set = artifact_set_or_id
     else:
         artifact_set = repo.get_set_by_id(artifact_set_or_id)
-
-    return artifact_set.rename(name).put(repo)
+    
+    return artifact_set.relabel(labels).put(repo)
 
 
 def transform_value(proxy_artifact, transformer_fn):
@@ -486,11 +507,12 @@ class MemoryRepo(ArtifactRepository):
 
         return art_set
 
-    def get_set_by_name(self, name):
+    def get_set_by_labels(self, labels):
         cs.ensure_read(self)
-        versions = [s for s in self.sets if s.name == name]
+        labels = _check_labels_name(labels)
+        versions = [s for s in self.sets if s.labels == labels]
         if not versions:
-            raise KeyError(name, self)
+            raise KeyError(labels, self)
         return sorted(versions, key=lambda s: s.created_at,
                       reverse=True)[0]
 
@@ -848,18 +870,20 @@ class PostgresRepo(ArtifactRepository):
             raise KeyError(set_id, self)
 
 
-    def get_set_by_name(self, name):
+    def get_set_by_labels(self, labels):
         cs.ensure_read(self)
+        labels = _check_labels_name(labels)
+
         with self.session() as session:
             result = (session.query(db.ArtifactSet)
-                      .filter(db.ArtifactSet.name == name)
+                      .filter(db.ArtifactSet.labels == labels)
                       .order_by(db.ArtifactSet.created_at.desc())
                       .first())
 
         if result:
             return self._db_to_mem_set(result)
         else:
-            raise KeyError(name, self)
+            raise KeyError(labels, self)
 
     def delete_set(self, set_id):
         cs.ensure_delete(self, check_contains=False)
@@ -930,9 +954,9 @@ class ChainedRepo(ArtifactRepository):
             return store.get_set_by_id(id)
         return cs.chained_get(self, get, set_id, put=_put_set)
 
-    def get_set_by_name(self, set_name):
+    def get_set_by_labels(self, set_name):
         def get(store, name):
-            return store.get_set_by_name(name)
+            return store.get_set_by_labels(name)
         return cs.chained_get(self, get, set_name, put=_put_set)
 
     def delete_set(self, id):
@@ -960,27 +984,32 @@ class ChainedRepo(ArtifactRepository):
 
 ### ArtifactSet logic
 
-def _set_op(operator, *sets, name=None):
+def _set_op(operator, *sets, labels=None):
     new_ids = t.reduce(operator, t.map(lambda s: s.artifact_ids, sets))
-    return ArtifactSet(new_ids, name)
-
+    return ArtifactSet(new_ids, labels)
 
 set_union = t.partial(_set_op, ops.or_)
 set_difference = t.partial(_set_op, ops.sub)
 set_intersection = t.partial(_set_op, ops.and_)
 
-artifact_set_properties = ['id', 'artifact_ids', 'created_at', 'name']
+artifact_set_properties = ['id', 'artifact_ids', 'created_at', 'labels']
 class ArtifactSet(namedtuple('ArtifactSet', artifact_set_properties)):
 
-    def __new__(cls, artifact_ids, name=None, created_at=None, id=None):
+    def __new__(cls, artifact_ids, labels=None, created_at=None, id=None):
         artifact_ids = t.map(_artifact_id, artifact_ids)
+        labels = _check_labels_name(labels)
         ids = frozenset(artifact_ids)
         if id:
             set_id = id
         else:
             set_id = hash(ids)
         created_at = created_at if created_at else datetime.utcnow()
-        return super(ArtifactSet, cls).__new__(cls, set_id, ids, created_at, name)
+        return super(ArtifactSet, cls).__new__(cls, set_id, ids, created_at, labels)
+
+    @property
+    def name(self):
+        if self.labels is not None:
+            return self.labels.get('name')
 
     def __eq__(self, other):
         if isinstance(other, self.__class__):
@@ -991,34 +1020,38 @@ class ArtifactSet(namedtuple('ArtifactSet', artifact_set_properties)):
         pass
         # return all artifacts found wrapped in list
 
-    def add(self, artifact_or_id, name=None):
+    def add(self, artifact_or_id, labels=None):
         artifact_id = _artifact_id(artifact_or_id)
-        return ArtifactSet(self.artifact_ids | {artifact_id}, name)
+        return ArtifactSet(self.artifact_ids | {artifact_id}, labels)
 
-    def remove(self, artifact_or_id, name=None):
+    def remove(self, artifact_or_id, labels=None):
         artifact_id = _artifact_id(artifact_or_id)
-        return ArtifactSet(self.artifact_ids - {artifact_id}, name)
+        return ArtifactSet(self.artifact_ids - {artifact_id}, labels)
 
-    def union(self, *sets, name=None):
-        return set_union(self, *sets, name=name)
+    def union(self, *sets, labels=None):
+        return set_union(self, *sets, labels=labels)
 
     def __or__(self, other_set):
         return set_union(self, other_set)
 
-    def difference(self, *sets, name=None, repo=None):
-        return set_difference(self, *sets, name=name)
+    def difference(self, *sets, labels=None, repo=None):
+        return set_difference(self, *sets, labels=labels)
 
     def __sub__(self, other_set):
         return set_difference(self, other_set)
 
-    def intersection(self, *sets, name=None):
-        return set_intersection(self, *sets, name=name)
+    def intersection(self, *sets, labels=None):
+        return set_intersection(self, *sets, labels=labels)
 
     def __and__(self, other_set):
         return set_intersection(self, other_set)
 
+    def relabel(self, labels):
+        labels = _check_labels_name(labels)
+        return self._replace(labels=labels)
+
     def rename(self, name):
-        return self._replace(name=name)
+        return self.relabel({'name': name})
 
     def put(self, repo=None):
         repo = repo if repo else get_default_repo()
@@ -1056,7 +1089,7 @@ class RepoSpy(wrapt.ObjectProxy):
 
 
 @contextmanager
-def capture_set(name=None, initial_set=None):
+def capture_set(labels=None, initial_set=None):
     if initial_set:
         initial = set(t.map(_artifact_id, initial_set))
     else:
@@ -1068,7 +1101,7 @@ def capture_set(name=None, initial_set=None):
         result = []
         yield result
         artifact_ids = spy.artifact_ids | initial
-    result.append(ArtifactSet(artifact_ids, name=name).put(repo))
+    result.append(ArtifactSet(artifact_ids, labels=labels).put(repo))
 
 
 def coerce_to_artifact(artifact_or_id, repo=None):

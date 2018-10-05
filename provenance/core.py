@@ -665,27 +665,27 @@ def archive_file(filename, name=None, delete_original=False, custom_fields=None,
     return _archive_file(filename, custom_fields)
 
 
-def provenance_set(set_name=None, initial_set=None, set_name_fn=None):
-    if set_name and set_name_fn:
-        raise ValueError("You cannot provide both set_name and set_name_fn.")
+def provenance_set(set_labels=None, initial_set=None, set_labels_fn=None):
+    if set_labels and set_labels_fn:
+        raise ValueError("You cannot provide both set_labels and set_labels_fn.")
 
     def make_wrapper(f):
-        if set_name_fn:
+        if set_labels_fn:
             base_fn = _base_fn(f)
             extract_args = utils.args_extractor(base_fn, merge_defaults=True)
             func_info = utils.fn_info(f)
 
         @bfu.wraps(f)
         def wrapper(*fargs, **fkargs):
-            if set_name_fn:
+            if set_labels_fn:
                 varargs, argsd = extract_args(fargs, fkargs)
                 varargs += func_info['varargs']
                 argsd.update(func_info['kargs'])
-                name = set_name_fn(*varargs, **argsd)
+                labels = set_labels_fn(*varargs, **argsd)
             else:
-                name = set_name
+                labels = set_labels
 
-            with repos.capture_set(name=name, initial_set=initial_set) as result:
+            with repos.capture_set(labels=labels, initial_set=initial_set) as result:
                 f(*fargs, **fkargs)
             return result[0]
 

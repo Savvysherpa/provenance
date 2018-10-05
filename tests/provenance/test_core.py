@@ -368,9 +368,21 @@ def test_set_creation(repo):
     b = artifact_record(id='blah')
     repo.put(a)
     repo.put(b)
-    artifact_set = r.create_set([a,b], name='myset')
+    artifact_set = r.create_set([a,b], labels='myset')
 
-    assert repo.get_set_by_name('myset') == artifact_set
+    assert repo.get_set_by_labels('myset') == artifact_set
+    assert repo.get_set_by_id(artifact_set.id) == artifact_set
+
+
+def test_set_creation_with_labels_dict(repo):
+    a = artifact_record(id='foo')
+    b = artifact_record(id='blah')
+    repo.put(a)
+    repo.put(b)
+    labels = {'name': 'myset', 'foo': 54, 'bar': 23}
+    artifact_set = r.create_set([a,b], labels=labels)
+
+    assert repo.get_set_by_labels(labels) == artifact_set
     assert repo.get_set_by_id(artifact_set.id) == artifact_set
 
 
@@ -381,44 +393,44 @@ def test_set_renaming(repo):
     repo.put(b)
     named_set = r.create_set([a,b], 'foobar')
 
-    assert repo.get_set_by_name('foobar') == named_set
-    renamed_set = r.name_set(named_set, 'baz')
+    assert repo.get_set_by_labels('foobar') == named_set
+    renamed_set = r.label_set(named_set, 'baz')
 
     # we don't delete the old one
-    assert repo.get_set_by_name('foobar') == named_set
-    assert repo.get_set_by_name('baz') == renamed_set
+    assert repo.get_set_by_labels('foobar') == named_set
+    assert repo.get_set_by_labels('baz') == renamed_set
 
 
 def test_adding_new_artifact_to_set():
     a = artifact_record(id='foo')
     b = artifact_record(id='blah')
-    artifact_set = r.ArtifactSet([a], name='myset')
+    artifact_set = r.ArtifactSet([a], labels='myset')
     updated_set = artifact_set.add(b)
     assert updated_set.name is None
 
-    updated_named_set = artifact_set.add(b, name='myset')
+    updated_named_set = artifact_set.add(b, labels='myset')
     assert updated_named_set.name == 'myset'
 
 
 def test_removing_artifact_from_set():
     a = artifact_record(id='foo')
     b = artifact_record(id='blah')
-    artifact_set = r.ArtifactSet([a.id, b.id], name='myset')
+    artifact_set = r.ArtifactSet([a.id, b.id], labels='myset')
     updated_set = artifact_set.remove(b)
 
     assert b not in updated_set
     assert updated_set.name is None
 
-    updated_named_set = artifact_set.remove(b, name='myset')
+    updated_named_set = artifact_set.remove(b, labels='myset')
     assert b not in updated_named_set
     assert updated_named_set.name == 'myset'
 
 
 def test_set_unions():
     a, b, c, d = [artifact_record(id=l) for l in 'abcd']
-    set_one = r.ArtifactSet([a, b], name='set one')
-    set_two = r.ArtifactSet([c, d], name='set two')
-    set_three = set_one.union(set_two, name='set three')
+    set_one = r.ArtifactSet([a, b], labels='set one')
+    set_two = r.ArtifactSet([c, d], labels='set two')
+    set_three = set_one.union(set_two, labels='set three')
 
     assert set_three.name == 'set three'
 
@@ -428,12 +440,13 @@ def test_set_unions():
 
 def test_set_differences():
     a, b, c, d = [artifact_record(id=l) for l in 'abcd']
-    set_one = r.ArtifactSet([a, b, c], name='set one')
-    set_two = r.ArtifactSet([c, d], name='set two')
-    set_three = set_one.difference(set_two, name='set three')
+    set_one = r.ArtifactSet([a, b, c], labels='set one')
+    set_two = r.ArtifactSet([c, d], labels='set two')
+    set_three = set_one.difference(set_two, labels='set three')
 
 
     assert set_three.name == 'set three'
+    assert set_three.labels == {'name': 'set three'}
     expected_set = {'a', 'b', 'c'} - {'c', 'd'}
     assert set_three.artifact_ids == expected_set
     # check that the operator works too
@@ -442,9 +455,9 @@ def test_set_differences():
 
 def test_set_intersections():
     a, b, c, d = [artifact_record(id=l) for l in 'abcd']
-    set_one = r.ArtifactSet([a, b, c], name='set one')
-    set_two = r.ArtifactSet([c, d], name='set two')
-    set_three = set_one.intersection(set_two, name='set three')
+    set_one = r.ArtifactSet([a, b, c], labels='set one')
+    set_two = r.ArtifactSet([c, d], labels='set two')
+    set_three = set_one.intersection(set_two, labels='set three')
 
 
     assert set_three.name == 'set three'
@@ -464,19 +477,19 @@ def test_set_capture(repo):
     def mult(x, y):
        return x * y
 
-    with p.capture_set(name='first'):
+    with p.capture_set(labels='first'):
         x1 = add(2, 2)
         z1 = mult(x1, 10)
 
-    first_set = repo.get_set_by_name('first')
+    first_set = repo.get_set_by_labels('first')
     assert first_set.artifact_ids == {x1.artifact.id, z1.artifact.id}
 
 
-    with p.capture_set(name='second'):
+    with p.capture_set(labels='second'):
         _x = add(2, 2)
         z2 = mult(_x, 20)
 
-    second_set = repo.get_set_by_name('second')
+    second_set = repo.get_set_by_labels('second')
     # note how we check to see if x1 is present!
     assert second_set.artifact_ids == {x1.artifact.id, z2.artifact.id}
 
@@ -493,11 +506,11 @@ def test_set_capture_on_loads(repo):
 
     x = add(3, 33)
 
-    with p.capture_set(name='first'):
+    with p.capture_set(labels='first'):
         x = repo.get_by_id(x.artifact.id).proxy()
         z1 = mult(x, 10)
 
-    first_set = repo.get_set_by_name('first')
+    first_set = repo.get_set_by_labels('first')
     assert first_set.artifact_ids == {x.artifact.id, z1.artifact.id}
 
 
@@ -513,10 +526,10 @@ def test_set_capture_with_initial_artifacts(repo):
 
     x = add(3, 33)
 
-    with p.capture_set(initial_set={x.artifact.id}, name='first'):
+    with p.capture_set(initial_set={x.artifact.id}, labels='first'):
         z1 = mult(x, 10)
 
-    first_set = repo.get_set_by_name('first')
+    first_set = repo.get_set_by_labels('first')
     assert first_set.artifact_ids == {x.artifact.id, z1.artifact.id}
 
 
@@ -530,14 +543,15 @@ def test_provenance_set_decorator(repo):
     def mult(x, y):
        return x * y
 
-    @p.provenance_set(set_name='foobar')
+    @p.provenance_set(set_labels='foobar')
     def my_pipeline(a, b=5, y=10):
         x = add(a, b)
         z = mult(x, y)
 
     my_set = my_pipeline(2)
     assert my_set.name == 'foobar'
-    assert repo.get_set_by_name('foobar').id == my_set.id
+    assert my_set.labels == {'name': 'foobar'}
+    assert repo.get_set_by_labels('foobar').id == my_set.id
 
 
 
@@ -552,7 +566,7 @@ def test_provenance_set_decorator_with_provenance(repo):
        return x * y
 
     @p.provenance()
-    @p.provenance_set(set_name='foobar')
+    @p.provenance_set(set_labels='foobar')
     def my_pipeline(a, b=5, y=10):
         x = add(a, b)
         z = mult(x, y)
@@ -562,7 +576,7 @@ def test_provenance_set_decorator_with_provenance(repo):
     assert (my_set.artifact.inputs['kargs'] ==
             {'a': 2, 'b':5, 'y': 10})
 
-    assert repo.get_set_by_name('foobar').id == my_set.id
+    assert repo.get_set_by_labels('foobar').id == my_set.id
 
 
 def test_provenance_set_decorator_being_named_with_fn(repo):
@@ -575,13 +589,32 @@ def test_provenance_set_decorator_being_named_with_fn(repo):
     def mult(x, y):
        return x * y
 
-    @p.provenance_set(set_name_fn=lambda a, b, y: 'pipeline_{}_{}'.format(a,b))
+    @p.provenance_set(set_labels_fn=lambda a, b, y: 'pipeline_{}_{}'.format(a,b))
     def my_pipeline(a, b=5, y=10):
         x = add(a, b)
         z = mult(x, y)
 
     my_set = my_pipeline(2)
     assert my_set.name == 'pipeline_2_5'
+
+
+def test_provenance_set_decorator_being_named_with_fn_retunring_labels_dict(repo):
+
+    @p.provenance()
+    def add(a, b):
+       return a + b
+
+    @p.provenance()
+    def mult(x, y):
+       return x * y
+
+    @p.provenance_set(set_labels_fn=lambda **kargs: t.assoc(kargs, 'name', 'foobar'))
+    def my_pipeline(a, b=5, y=10):
+        x = add(a, b)
+        z = mult(x, y)
+
+    my_set = my_pipeline(2)
+    assert my_set.labels == {'a': 2, 'b': 5, 'y': 10, 'name': 'foobar'}
 
 def test_provenance_set_decorator_being_named_with_fn_used_with_curry(repo):
 
@@ -595,7 +628,7 @@ def test_provenance_set_decorator_being_named_with_fn_used_with_curry(repo):
 
     @t.curry
     @p.provenance()
-    @p.provenance_set(set_name_fn=lambda a, b, y: 'pipeline_{}_{}_{}'.format(a,b,y))
+    @p.provenance_set(set_labels_fn=lambda a, b, y: 'pipeline_{}_{}_{}'.format(a,b,y))
     def my_pipeline(a, b, y=30):
         x = add(a, b)
         z = mult(x, y)
