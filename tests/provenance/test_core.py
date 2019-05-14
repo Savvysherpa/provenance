@@ -835,6 +835,27 @@ def test_use_cache_false_with_composites(repo):
     assert c['inc'].artifact.id != a['inc'].artifact.id
 
 
+def test_read_only_true(repo):
+    @p.provenance(name='read_only_test')
+    def increase(x):
+        return x + 1
+
+    a = increase(5)
+    assert a == 6
+
+    @p.provenance(name='read_only_test', read_only=True)
+    def load_increase(x):
+        pass
+
+    # We expect the values to be the same, and artifacts to be different
+    b = load_increase(5)
+    assert b == 6
+    assert b.artifact.id == a.artifact.id
+
+    not_found = load_increase(34)
+    assert not_found == None
+
+
 def test_check_mutations(repo, with_check_mutations):
     @p.provenance()
     def load_data():
@@ -922,6 +943,3 @@ def test_dependencies_include_wrapped_artifacts(dbdiskrepo):
 
     deps = set([a.id for a in p.dependencies(result.artifact.id)])
     assert sub in deps
-
-
-

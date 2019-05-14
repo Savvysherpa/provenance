@@ -56,6 +56,7 @@ def fn_info(f):
     info['custom_fields'] = metadata['custom_fields']
     info['preserve_file_ext'] = metadata['preserve_file_ext']
     info['use_cache'] = metadata['use_cache']
+    info['read_only'] = metadata['read_only']
     if info['composite']:
         if info['archive_file']:
             raise NotImplementedError("Using 'composite' and 'archive_file' is not supported.")
@@ -142,7 +143,7 @@ def create_id(input_hashes, input_hash_fn, name, version):
 @t.curry
 def composite_artifact(repo, _run_info, inputs, input_hashes, input_artifact_ids,
                        input_hash_fn, artifact_info, compute_duration,
-                       computed_at, use_cache, key, value):
+                       computed_at, use_cache, read_only, key, value):
     start_hash_time = time.time()
     info = copy(artifact_info)
     info['composite'] = False
@@ -175,7 +176,10 @@ def composite_artifact(repo, _run_info, inputs, input_hashes, input_artifact_ids
                                 compute_duration=compute_duration,
                                 hash_duration=hash_duration, computed_at=computed_at,
                                 inputs=inputs, run_info=_run_info, **info)
-        artifact = repo.put(record)
+        if read_only:
+            artifact = repos._artifact_from_record(repo, record)
+        else:
+            artifact = repo.put(record)
 
     return artifact
 
@@ -250,6 +254,10 @@ def provenance_wrapper(repo, f):
             use_cache = repos.get_use_cache()
         else:
             use_cache = func_info['use_cache']
+        if func_info['read_only'] is None:
+            read_only = repos.get_read_only()
+        else:
+            read_only = func_info['read_only']
 
         start_hash_time = time.time()
         varargs, argsd = extract_args(args, kargs)
@@ -304,7 +312,7 @@ def provenance_wrapper(repo, f):
                 ca = composite_artifact(r, _run_info, inputs, input_hashes,
                                         input_artifact_ids, input_hash_fn,
                                         artifact_info, compute_duration,
-                                        computed_at, use_cache)
+                                        computed_at, use_cache, read_only)
                 value = {k: ca(k, v) for k, v in value.items()}
                 artifact_info_['serializer'] = 'auto'
                 artifact_info_['load_kwargs'] = None
@@ -341,7 +349,10 @@ def provenance_wrapper(repo, f):
                                         hash_duration=hash_duration,
                                         computed_at=computed_at, run_info=_run_info,
                                         inputs=inputs, **artifact_info_)
-                artifact = r.put(record)
+                if read_only:
+                    artifact = repos._artifact_from_record(r, record)
+                else:
+                    artifact = r.put(record)
 
             if archive_file:
                 # mark the file as in the repo (yucky, I know)
@@ -427,7 +438,7 @@ def provenance(version=0, repo=None, name=None, merge_defaults=None,
                archive_file=False, delete_original_file=False, preserve_file_ext=False,
                returns_composite=False, custom_fields=None,
                serializer=None, load_kwargs=None, dump_kwargs=None, use_cache=None,
-               tags=None, _provenance_wrapper=provenance_wrapper):
+               read_only=None, tags=None, _provenance_wrapper=provenance_wrapper):
     """
     Decorates a function so that all inputs and outputs are cached. Wraps the return
     value in a proxy that has an artifact attached to it allowing for the provenance
@@ -503,7 +514,7 @@ def provenance(version=0, repo=None, name=None, merge_defaults=None,
         structure of {'kargs': {'param_a': 42}, 'varargs': (100,..)}.
         It should return a dict of the same shape but is able to change this dict
         as needed.  The main use case for this function is overshadowed by the
-        remove parameter and the value_repr function. 
+        remove parameter and the value_repr function.
 
     merge_defaults : bool or list of parameters to be merged
         When True then the wrapper introspects the argspec of the function being
@@ -521,6 +532,15 @@ def provenance(version=0, repo=None, name=None, merge_defaults=None,
         quick local iterations of a function to avoid having to bump the version with
         each change. When set to None (the default) it defers to the global provenance
         use_cache setting.
+
+    read_only: bool or None (default None)
+        read_only True will prevent any artifacts from being persisted to the repo.
+        This should be used when you want to load existing artifacts from provenance
+        but you do not want to add artifacts if the one you're looking for does not
+        exist. This is useful when consuming artifacts created elsewhere, or when
+        you are doing quick iterations (as with use_cache False) but you still want
+        to use the cache for existing artifacts. When set to None (the default) it
+        defers to the global provenance read_only setting.
 
     custom_fields : dict
         A dict with types that serialize to json. These are saved for searching in
@@ -596,7 +616,8 @@ def provenance(version=0, repo=None, name=None, merge_defaults=None,
                                   'serializer': serializer,
                                   'load_kwargs': load_kwargs,
                                   'dump_kwargs': dump_kwargs,
-                                  'use_cache': use_cache}
+                                  'use_cache': use_cache,
+                                  'read_only': read_only}
         f.__merge_defaults__ = merge_defaults
         return _provenance_wrapper(repo, f)
 

@@ -149,6 +149,7 @@ def load_config(config):
                        default_repo=config['default_repo'],
                        run_info_fn=config.get('run_info_fn', None),
                        use_cache=config.get('use_cache', True),
+                       read_only=config.get('read_only', False),
                        check_mutations=config.get('check_mutations', False))
     r.Config.set_current(pconfig)
     return pconfig

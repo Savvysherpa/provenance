@@ -83,13 +83,14 @@ class Config(object):
     def set_current(cls, registry):
         cls._current = registry
 
-    def __init__(self, blobstores, repos, default_repo, run_info_fn=None, use_cache=True, check_mutations=False):
+    def __init__(self, blobstores, repos, default_repo, run_info_fn=None, use_cache=True, read_only=False, check_mutations=False):
         self.blobstores = blobstores
         self.repos = repos
         self.set_default_repo(default_repo)
         self._run_info = None
         self.run_info_fn = run_info_fn or t.identity
         self.use_cache = use_cache
+        self.read_only = read_only
         self.check_mutations = check_mutations
 
     def set_default_repo(self, repo):
@@ -144,6 +145,14 @@ def get_use_cache():
 
 def set_use_cache(setting):
     current_config().use_cache = setting
+
+
+def get_read_only():
+    return current_config().read_only
+
+
+def set_read_only(setting):
+    current_config().read_only = setting
 
 
 def get_check_mutations():
@@ -255,7 +264,7 @@ def label_set(artifact_set_or_id, labels):
         artifact_set = artifact_set_or_id
     else:
         artifact_set = repo.get_set_by_id(artifact_set_or_id)
-    
+
     return artifact_set.relabel(labels).put(repo)
 
 
@@ -342,13 +351,13 @@ def is_proxy(obj):
 
 
 class Artifact(object):
-    def __init__(self, repo, props, value=None, inputs=None, run_info=None):
+    def __init__(self, repo, props, value='not provided', inputs=None, run_info=None):
         assert ('id' in props), "props must contain 'id'"
         assert ('value_id' in props), "props must contain 'value_id'"
         self.__dict__ = props.copy()
         self.repo = repo
 
-        if value is not None:
+        if value != 'not provided':
             self._value = value
         if inputs is not None:
             self._inputs = inputs
