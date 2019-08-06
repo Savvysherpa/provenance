@@ -7,7 +7,8 @@ from ..repos import is_proxy
 
 
 def elide(obj, length=30):
-    s = str(obj)
+    table = str.maketrans({"{": "\{", "}": "\}"})
+    s = str(obj).translate(table)
     return (s[:length] + '..') if len(s) > length else s
 
 
