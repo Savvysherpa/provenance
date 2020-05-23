@@ -16,7 +16,6 @@ setup(
     version=versioneer.get_version(),
     cmdclass=versioneer.get_cmdclass(),
     packages=['provenance', 'provenance.sftp', 'provenance.vis'],
-    setup_requires=['pytest>=3.0.0', 'pytest-runner'],
     install_requires=[open('requirements.txt').read().strip().split('\n')],
     tests_requires=[open('test_requirements.txt').read().strip().split('\n')],
     extras_require=subpackages,
