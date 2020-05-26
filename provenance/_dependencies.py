@@ -1,6 +1,5 @@
 import cloudpickle
 import io
-from joblib._compat import _bytes_or_unicode, PY3_OR_LATER
 from ordered_set import OrderedSet
 import pickle
 
@@ -16,8 +15,7 @@ class DependencyWalker(Pickler):
         self.stream = io.BytesIO()
         self.dependents = []
         self.branches = []
-        protocol = (pickle.DEFAULT_PROTOCOL if PY3_OR_LATER
-                    else pickle.HIGHEST_PROTOCOL)
+        protocol = pickle.DEFAULT_PROTOCOL
         Pickler.__init__(self, self.stream, protocol=protocol)
 
     def save(self, obj):

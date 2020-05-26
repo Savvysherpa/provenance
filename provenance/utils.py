@@ -1,8 +1,8 @@
+import inspect
 from collections import OrderedDict, Sequence
 import toolz as t
 import toolz.curried as tc
 from boltons import funcutils as bfu
-from joblib.func_inspect import getfullargspec
 
 from provenance.compatibility import getargspec
 
@@ -18,7 +18,7 @@ def args_extractor(f, merge_defaults=False):
     have a names.
 
     """
-    spec = getfullargspec(f)
+    spec = inspect.getfullargspec(f)
     if spec.defaults:
         param_defaults = dict(zip(spec.args[-len(spec.defaults):],
                                    spec.defaults))

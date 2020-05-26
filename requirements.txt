@@ -1,6 +1,6 @@
 s3fs==0.0.9
 boltons>=16.5.1
-joblib>=0.10.2
+joblib>=0.15.0
 toolz>=0.8.2
 cloudpickle>=0.2.1
 psutil>=5.0.0
