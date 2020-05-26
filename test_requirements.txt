@@ -1,5 +1,6 @@
 moto>=0.4.30
-pytest==3.6
+pytest>=3.0.0
+pytest-runner
 pytest-pythonpath>=0.7.1
 # remove hypothesis if we don't end up writing property tests with it
 hypothesis>=3.6.0
