@@ -17,7 +17,6 @@ setup(
     cmdclass=versioneer.get_cmdclass(),
     packages=['provenance', 'provenance.sftp', 'provenance.vis'],
     install_requires=[open('requirements.txt').read().strip().split('\n')],
-    tests_requires=[open('test_requirements.txt').read().strip().split('\n')],
     extras_require=subpackages,
     include_package_data=True,
     description="Provenance and caching library for functions, built for creating lightweight machine learning pipelines.",

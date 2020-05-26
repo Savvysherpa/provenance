@@ -7,3 +7,4 @@ hypothesis>=3.6.0
 h5py
 pandas
 torch
+-r requirements.txt
