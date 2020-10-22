@@ -2,12 +2,15 @@
 provenance
 ==========
 
-|version status| |build status| |docs|
+|version status| |conda-version status| |build status| |docs|
 
 
 .. |version status| image:: https://img.shields.io/pypi/v/provenance.svg
    :target: https://pypi.python.org/pypi/provenance
    :alt: Version Status
+.. |conda-version status| image:: https://img.shields.io/conda/vn/conda-forge/provenance
+   :target: https://anaconda.org/conda-forge/provenance
+   :alt: Conda version Status
 .. |build status| image:: https://travis-ci.org/bmabey/provenance.png?branch=trunk
    :target: https://travis-ci.org/bmabey/provenance
    :alt: Build Status
@@ -102,6 +105,12 @@ For everything all at once:
 .. code:: bash
 
     pip install provenance[all]
+
+provenance is also available from conda-forge for conda installations:
+
+.. code:: bash
+
+    conda install -c conda-forge provenance
 
 
 
