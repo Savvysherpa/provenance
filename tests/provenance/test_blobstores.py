@@ -87,7 +87,7 @@ def test_sftpstore_import():
     import provenance._config as c
 
     try:
-        import paramiko    # noqa: F401
+        import paramiko
 
         _paramiko = True
     except ImportError:

@@ -23,8 +23,8 @@ def s3fs():
 
     m = moto.mock_s3()
     m.start()
-    import s3fs
     import boto3
+    import s3fs
 
     client = boto3.client('s3')
     client.create_bucket(Bucket='bucket')

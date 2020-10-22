@@ -71,14 +71,14 @@ register_serializer('cloudpickle', cloudpickle_dump, cloudpickle_load)
 
 def _pandas_and_parquet_present():
     try:
-        import pandas    # noqa: F401
+        import pandas
     except ImportError:
         return False
     try:
-        import pyarrow    # noqa: F401
+        import pyarrow
     except:
         try:
-            import fastparquet    # noqa: F401
+            import fastparquet
         except ImportError:
             return False
     return True
@@ -119,7 +119,7 @@ if _pandas_and_parquet_present():
 
 def _pytorch_present():
     try:
-        import torch    # noqa F401
+        import torch
     except:
         return False
     return True

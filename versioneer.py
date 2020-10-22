@@ -1634,9 +1634,9 @@ def get_cmdclass():
 
     if 'py2exe' in sys.modules:    # py2exe enabled?
         try:
-            from py2exe.distutils_buildexe import py2exe as _py2exe    # py3
+            from py2exe.distutils_buildexe import py2exe as _py2exe  # py3
         except ImportError:
-            from py2exe.build_exe import py2exe as _py2exe    # py2
+            from py2exe.build_exe import py2exe as _py2exe  # py2
 
         class cmd_py2exe(_py2exe):
             def run(self):
