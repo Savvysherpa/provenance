@@ -34,4 +34,5 @@ setup(
         'Intended Audience :: Science/Research',
         'License :: OSI Approved :: MIT License',
     ],
+    python_requires='>=3.5',
 )

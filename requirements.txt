@@ -1,4 +1,4 @@
-s3fs==0.0.9
+s3fs>=0.0.9
 boltons>=16.5.1
 joblib>=0.15.0
 toolz>=0.8.2
